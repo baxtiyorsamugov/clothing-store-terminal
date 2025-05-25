@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Продажа товара{% endblock %}
+{% block content %}
+  <h2>Продажа товара</h2>
+  <form method="post" class="mt-4 needs-validation" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="mb-3">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+          <div class="form-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% if field.errors %}
+          <div class="text-danger small">{{ field.errors|striptags }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-danger">Продать</button>
+  </form>
+{% endblock %}

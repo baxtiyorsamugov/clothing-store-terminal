@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Категории{% endblock %}
+{% block content %}
+  <h2>Категории
+    <a href="{% url 'category-add' %}" class="btn btn-sm btn-success">+ Добавить</a>
+  </h2>
+  <ul class="list-group">
+    {% for c in object_list %}
+      <li class="list-group-item">{{ c }}</li>
+    {% empty %}
+      <li class="list-group-item">Нет категорий</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

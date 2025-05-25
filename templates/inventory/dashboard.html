@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Дашборд{% endblock %}
+{% block content %}
+  <h1>Дашборд</h1>
+
+  <div class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <h5>Вариантов товаров</h5>
+        <p class="display-6">{{ total_variants }}</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <h5>Товаров на складе</h5>
+        <p class="display-6">{{ total_stock }}</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <h5>Всего транзакций</h5>
+        <p class="display-6">{{ total_transactions }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- График продаж -->
+  <div class="mb-5">
+    <h3>Продажи за последние 7 дней</h3>
+    <canvas id="salesChart" height="120"></canvas>
+  </div>
+
+  <!-- График остатков -->
+  <div>
+    <h3>Остатки по категориям</h3>
+    <canvas id="stockChart" height="120"></canvas>
+  </div>
+
+  <script>
+    // --- График продаж ---
+    const salesCtx = document.getElementById('salesChart').getContext('2d');
+    new Chart(salesCtx, {
+      type: 'line',
+      data: {
+        labels: {{ sales_dates|safe }},
+        datasets: [{
+          label: 'Штук продано',
+          data: {{ sales_qtys|safe }},
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'Кол-во продаж' } },
+          x: { title: { display: true, text: 'Дата' } }
+        }
+      }
+    });
+
+    // --- График остатков ---
+    const stockCtx = document.getElementById('stockChart').getContext('2d');
+    new Chart(stockCtx, {
+      type: 'bar',
+      data: {
+        labels: {{ stock_categories|safe }},
+        datasets: [{
+          label: 'Остаток',
+          data: {{ stock_values|safe }},
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'Штук на складе' } },
+          x: { title: { display: true, text: 'Категория' } }
+        }
+      }
+    });
+  </script>
+{% endblock %}

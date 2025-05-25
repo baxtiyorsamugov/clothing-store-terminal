@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Товары{% endblock %}
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Варианты товаров</h2>
+    <a href="{% url 'variant-add' %}" class="btn btn-sm btn-success">+ Добавить</a>
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+      <select name="category" class="form-select">
+        <option value="">Все категории</option>
+        {% for cat in root_categories %}
+          <optgroup label="{{ cat.name }}">
+            {% for sub in cat.subcategories.all %}
+              <option value="{{ sub.id }}"
+                {% if selected_category == sub.id|stringformat:"s" %}selected{% endif %}>
+                {{ sub.name }}
+              </option>
+            {% endfor %}
+          </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <select name="sort" class="form-select">
+        <option value="">Сортировать</option>
+        <option value="price"  {% if selected_sort == 'price'  %}selected{% endif %}>Цена ↑</option>
+        <option value="-price" {% if selected_sort == '-price' %}selected{% endif %}>Цена ↓</option>
+        <option value="stock"  {% if selected_sort == 'stock'  %}selected{% endif %}>Остаток ↑</option>
+        <option value="-stock" {% if selected_sort == '-stock' %}selected{% endif %}>Остаток ↓</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary">Применить</button>
+    </div>
+  </form>
+
+  <table class="table table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>SKU</th><th>Товар</th><th>Размер</th><th>Цвет</th><th>Остаток</th><th>Цена</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in object_list %}
+        <tr>
+            {# Мини-картинка QR и ссылка на скачивание #}
+            <td>
+              <img src="data:image/png;base64,{{ v.qr_code_base64 }}" 
+                   width="50" height="50" alt="QR {{ v.sku }}">
+              <div>
+                <a href="data:image/png;base64,{{ v.qr_code_base64 }}"
+                   download="{{ v.sku }}.png"
+                   class="link-primary small">Скачать</a>
+              </div>
+            </td>
+          <td>{{ v.sku }}</td>
+          <td>{{ v.product.name }}</td>
+          <td>{{ v.size }}</td>
+          <td>{{ v.color }}</td>
+          <td>{{ v.stock }}</td>
+          <td>{{ v.price }}</td>
+          <td>
+            <a href="{% url 'sale' %}?variant={{ v.id }}" class="btn btn-sm btn-outline-success">
+              Продать
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-center">Нет товаров</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+    <nav>
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">«</a>
+          </li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">»</a>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+{% endblock %}
