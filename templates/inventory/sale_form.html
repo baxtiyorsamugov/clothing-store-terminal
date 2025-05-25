@@ -1,21 +1,116 @@
+{# templates/inventory/sale_form.html #}
 {% extends "base.html" %}
-{% block title %}Продажа товара{% endblock %}
+{% block title %}Продажа через сканирование{% endblock %}
+
 {% block content %}
-  <h2>Продажа товара</h2>
-  <form method="post" class="mt-4 needs-validation" novalidate>
+  <h2>Продажа через сканирование</h2>
+
+  <div class="mb-4">
+    <video
+      id="video"
+      width="320" height="240"
+      autoplay muted playsinline
+      style="border:1px solid #444;"
+    ></video>
+    <div class="mt-2">
+      <button type="button" id="btn-scan" class="btn btn-secondary">Запустить сканер</button>
+      <button type="button" id="btn-stop"  class="btn btn-link">Стоп</button>
+    </div>
+  </div>
+
+  <form method="post" id="sale-form">
     {% csrf_token %}
-    {% for field in form %}
-      <div class="mb-3">
-        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}
-          <div class="form-text">{{ field.help_text }}</div>
-        {% endif %}
-        {% if field.errors %}
-          <div class="text-danger small">{{ field.errors|striptags }}</div>
-        {% endif %}
-      </div>
-    {% endfor %}
+    <input type="hidden" name="variant" id="field-variant-id">
+
+    <div class="mb-3">
+      <label for="field-sku" class="form-label">SKU</label>
+      <input type="text" id="field-sku" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="field-product" class="form-label">Товар</label>
+      <input type="text" id="field-product" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="field-attr" class="form-label">Размер / Цвет</label>
+      <input type="text" id="field-attr" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="field-price" class="form-label">Цена</label>
+      <input type="text" id="field-price" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="field-stock" class="form-label">Остаток на складе</label>
+      <input type="text" id="field-stock" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="field-quantity" class="form-label">Количество к продаже</label>
+      <input type="number" name="quantity" id="field-quantity"
+             class="form-control" min="1" value="1">
+    </div>
+
     <button type="submit" class="btn btn-danger">Продать</button>
   </form>
+{% endblock %}
+
+{% block extra_scripts %}
+  <!-- UMD-сборка ZXing, которая создаёт глобальный ZXing -->
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js"></script>
+  <script>
+    console.log('ZXing loaded?', typeof ZXing);  // должно быть "object"
+
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+    const videoElem  = document.getElementById('video');
+    const btnScan    = document.getElementById('btn-scan');
+    const btnStop    = document.getElementById('btn-stop');
+
+    console.log('Elements:', btnScan, btnStop, videoElem);
+
+    btnScan.addEventListener('click', () => {
+      console.log('Scan button clicked');
+      codeReader.decodeFromVideoDevice(null, videoElem, (result, err) => {
+        if (result) {
+          console.log('Got result:', result.getText());
+          codeReader.reset();
+          loadVariant(result.getText());
+        } else if (err && err.name !== 'NotFoundException') {
+          console.error(err);
+        }
+      }).catch(err => {
+        console.error('Ошибка запуска камеры:', err);
+        alert('Не удалось получить доступ к камере: ' + err.message);
+      });
+    });
+
+    btnStop.addEventListener('click', () => {
+      console.log('Stop button clicked');
+      codeReader.reset();
+    });
+
+    function loadVariant(sku) {
+      const url = "{% url 'variant-api' sku='__DUMMY__' %}"
+                    .replace('__DUMMY__', encodeURIComponent(sku));
+      fetch(url)
+        .then(r => {
+          if (!r.ok) throw new Error('Вариант не найден');
+          return r.json();
+        })
+        .then(data => {
+          document.getElementById('field-variant-id').value = data.id;
+          document.getElementById('field-sku').value        = data.sku;
+          document.getElementById('field-product').value    = data.product;
+          document.getElementById('field-attr').value       = data.size + ' / ' + data.color;
+          document.getElementById('field-price').value      = data.price;
+          document.getElementById('field-stock').value      = data.stock;
+        })
+        .catch(err => {
+          console.error(err);
+          alert(err.message);
+        });
+    }
+  </script>
 {% endblock %}
