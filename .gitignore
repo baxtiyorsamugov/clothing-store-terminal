@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+.env
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+
+# Django database file
+*.sqlite3
+
+# Media files (uploads)
+media/
+
+# Logs
+*.log
+
+# IDE and editor settings
+.vscode/
+.idea/
+
+# Distribution / build folders
+build/
+dist/
+*.egg-info/
+
+# Byte-compiled / optimized / DLL files
+*.so

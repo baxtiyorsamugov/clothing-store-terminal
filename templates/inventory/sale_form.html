@@ -1,116 +1,181 @@
 {# templates/inventory/sale_form.html #}
 {% extends "base.html" %}
-{% block title %}Продажа через сканирование{% endblock %}
+{% block title %}Продажа товаров{% endblock %}
 
 {% block content %}
-  <h2>Продажа через сканирование</h2>
+  <h2>Продажа товаров</h2>
 
-  <div class="mb-4">
-    <video
-      id="video"
-      width="320" height="240"
-      autoplay muted playsinline
-      style="border:1px solid #444;"
-    ></video>
-    <div class="mt-2">
-      <button type="button" id="btn-scan" class="btn btn-secondary">Запустить сканер</button>
-      <button type="button" id="btn-stop"  class="btn btn-link">Стоп</button>
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <video
+        id="video" width="320" height="240"
+        autoplay muted playsinline
+        style="border:1px solid #444;"
+      ></video>
+      <div class="mt-2">
+        <button type="button" id="btn-scan" class="btn btn-secondary">Запустить сканер</button>
+        <button type="button" id="btn-stop" class="btn btn-link">Стоп</button>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <label for="field-sku" class="form-label">SKU (вручную)</label>
+      <input type="text" id="field-sku" class="form-control" placeholder="Enter + Enter или сканируйте">
     </div>
   </div>
 
-  <form method="post" id="sale-form">
+  <hr>
+
+  <h4>Корзина</h4>
+  <form method="post" id="cart-form">
     {% csrf_token %}
-    <input type="hidden" name="variant" id="field-variant-id">
+    <input type="hidden" name="items_json" id="items-json">
 
-    <div class="mb-3">
-      <label for="field-sku" class="form-label">SKU</label>
-      <input type="text" id="field-sku" class="form-control" readonly>
-    </div>
+    <table class="table table-bordered" id="cart-table">
+      <thead class="table-light">
+        <tr>
+          <th>SKU</th><th>Товар</th><th>Аттрибуты</th><th>Цена</th><th>Кол-во</th><th>Сумма</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="cart-empty"><td colspan="7" class="text-center text-muted">Корзина пуста</td></tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="5" class="text-end">Всего:</th>
+          <th id="cart-total">0.00</th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
 
-    <div class="mb-3">
-      <label for="field-product" class="form-label">Товар</label>
-      <input type="text" id="field-product" class="form-control" readonly>
-    </div>
-
-    <div class="mb-3">
-      <label for="field-attr" class="form-label">Размер / Цвет</label>
-      <input type="text" id="field-attr" class="form-control" readonly>
-    </div>
-
-    <div class="mb-3">
-      <label for="field-price" class="form-label">Цена</label>
-      <input type="text" id="field-price" class="form-control" readonly>
-    </div>
-
-    <div class="mb-3">
-      <label for="field-stock" class="form-label">Остаток на складе</label>
-      <input type="text" id="field-stock" class="form-control" readonly>
-    </div>
-
-    <div class="mb-3">
-      <label for="field-quantity" class="form-label">Количество к продаже</label>
-      <input type="number" name="quantity" id="field-quantity"
-             class="form-control" min="1" value="1">
-    </div>
-
-    <button type="submit" class="btn btn-danger">Продать</button>
+    <button type="submit" class="btn btn-danger" id="btn-checkout" disabled>Завершить продажу</button>
   </form>
 {% endblock %}
 
 {% block extra_scripts %}
-  <!-- UMD-сборка ZXing, которая создаёт глобальный ZXing -->
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.18.6/umd/index.min.js"></script>
   <script>
-    console.log('ZXing loaded?', typeof ZXing);  // должно быть "object"
-
     const codeReader = new ZXing.BrowserMultiFormatReader();
     const videoElem  = document.getElementById('video');
     const btnScan    = document.getElementById('btn-scan');
     const btnStop    = document.getElementById('btn-stop');
+    const skuInput   = document.getElementById('field-sku');
+    const cartTable  = document.getElementById('cart-table').querySelector('tbody');
+    const emptyRow   = document.getElementById('cart-empty');
+    const totalCell  = document.getElementById('cart-total');
+    const checkout   = document.getElementById('btn-checkout');
+    const itemsInput = document.getElementById('items-json');
 
-    console.log('Elements:', btnScan, btnStop, videoElem);
+    let cart = [];  // {id, sku, product, attr, price, qty}
 
-    btnScan.addEventListener('click', () => {
-      console.log('Scan button clicked');
-      codeReader.decodeFromVideoDevice(null, videoElem, (result, err) => {
-        if (result) {
-          console.log('Got result:', result.getText());
-          codeReader.reset();
-          loadVariant(result.getText());
-        } else if (err && err.name !== 'NotFoundException') {
-          console.error(err);
-        }
-      }).catch(err => {
-        console.error('Ошибка запуска камеры:', err);
-        alert('Не удалось получить доступ к камере: ' + err.message);
+    function updateCartUI() {
+      // очистить
+      cartTable.innerHTML = '';
+      if (!cart.length) {
+        cartTable.appendChild(emptyRow);
+        checkout.disabled = true;
+        totalCell.textContent = '0.00';
+        itemsInput.value = '';
+        return;
+      }
+      checkout.disabled = false;
+      let total = 0;
+      cart.forEach((item, idx) => {
+        const row = document.createElement('tr');
+        const sum = item.price * item.qty;
+        total += sum;
+        row.innerHTML = `
+          <td>${item.sku}</td>
+          <td>${item.product}</td>
+          <td>${item.attr}</td>
+          <td>${item.price.toFixed(2)}</td>
+          <td>
+            <input type="number" min="1" value="${item.qty}"
+                   style="width:70px" data-idx="${idx}" class="form-control qty-input">
+          </td>
+          <td>${sum.toFixed(2)}</td>
+          <td>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-btn" data-idx="${idx}">&times;</button>
+          </td>
+        `;
+        cartTable.appendChild(row);
       });
-    });
-
-    btnStop.addEventListener('click', () => {
-      console.log('Stop button clicked');
-      codeReader.reset();
-    });
+      totalCell.textContent = total.toFixed(2);
+      itemsInput.value = JSON.stringify(cart.map(i => ({
+        variant: i.id,
+        quantity: i.qty
+      })));
+      // проставить слушатели
+      document.querySelectorAll('.remove-btn').forEach(btn =>
+        btn.onclick = () => {
+          const i = +btn.dataset.idx;
+          cart.splice(i,1);
+          updateCartUI();
+        }
+      );
+      document.querySelectorAll('.qty-input').forEach(input =>
+        input.onchange = () => {
+          const i = +input.dataset.idx;
+          cart[i].qty = Math.max(1, +input.value);
+          updateCartUI();
+        }
+      );
+    }
 
     function loadVariant(sku) {
-      const url = "{% url 'variant-api' sku='__DUMMY__' %}"
-                    .replace('__DUMMY__', encodeURIComponent(sku));
+      const url = "{% url 'variant-api' sku='__DUMMY__' %}".replace('__DUMMY__', encodeURIComponent(sku.trim()));
       fetch(url)
         .then(r => {
           if (!r.ok) throw new Error('Вариант не найден');
           return r.json();
         })
         .then(data => {
-          document.getElementById('field-variant-id').value = data.id;
-          document.getElementById('field-sku').value        = data.sku;
-          document.getElementById('field-product').value    = data.product;
-          document.getElementById('field-attr').value       = data.size + ' / ' + data.color;
-          document.getElementById('field-price').value      = data.price;
-          document.getElementById('field-stock').value      = data.stock;
+          const exists = cart.some(i => i.id === data.id);
+          if (!exists) {
+            cart.push({
+              id:      data.id,
+              sku:     data.sku,
+              product: data.product,
+              attr:    data.size + ' / ' + data.color,
+              price:   parseFloat(data.price),
+              qty:     1
+            });
+            updateCartUI();
+          }
         })
-        .catch(err => {
-          console.error(err);
-          alert(err.message);
-        });
+        .catch(e => alert(e.message));
     }
+
+    // события
+    btnScan.onclick = () => {
+      codeReader.decodeFromVideoDevice(null, videoElem, (result, err) => {
+        if (result) {
+          codeReader.reset();
+          loadVariant(result.getText());
+        }
+      }).catch(e => alert('Камеру не запустить: '+e));
+    };
+    btnStop.onclick = () => codeReader.reset();
+
+    skuInput.onkeypress = e => {
+      if (e.key==='Enter') {
+        e.preventDefault();
+        loadVariant(skuInput.value);
+        skuInput.value = '';
+      }
+    };
+
+    document.getElementById('cart-form').onsubmit = () => {
+      if (!cart.length) {
+        alert('Корзина пуста');
+        return false;
+      }
+      // Items JSON уже в hidden input — просто пропускаем
+      return true;
+    };
+
+    // начальная инициализация
+    updateCartUI();
   </script>
 {% endblock %}

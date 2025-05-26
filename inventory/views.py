@@ -1,7 +1,9 @@
 from django.views.generic import (
     ListView, CreateView, UpdateView, DeleteView, TemplateView, ListView
 )
-
+import json
+from django.views import View
+from django.shortcuts import redirect, render
 from django.db.models import Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -13,8 +15,10 @@ from .forms import (
     CategoryForm, ProductForm, VariantForm,
     StockInForm, SaleForm
 )
+from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from django.db.models import F
 
 class ProductCreateView(CreateView):
     model = Product
@@ -51,13 +55,52 @@ class DashboardView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # общее число товарных вариантов
-        ctx['total_variants'] = Variant.objects.count()
-        # суммарный остаток по всем вариантам
-        agg = Variant.objects.aggregate(total_stock=Sum('stock'))
-        ctx['total_stock'] = agg['total_stock'] or 0
-        # общее число транзакций
+
+        # 1) Основные карточки
+        ctx['total_variants']     = Variant.objects.count()
+        ctx['total_stock']        = Variant.objects.aggregate(total=Sum('stock'))['total'] or 0
         ctx['total_transactions'] = StockTransaction.objects.count()
+
+        # 2) Данные для линейного графика: продажи (OUTGOING) за последние 7 дней
+        today = timezone.localdate()
+        labels = []
+        data_sales = []
+        for i in range(6, -1, -1):
+            day = today - timezone.timedelta(days=i)
+            labels.append(day.strftime('%d.%m'))
+            day_sales = (
+                StockTransaction.objects
+                .filter(transaction_type=StockTransaction.OUT,
+                        timestamp__date=day)
+                .aggregate(total=Sum('quantity'))['total']
+                or 0
+            )
+            data_sales.append(day_sales)
+        ctx['chart_sales_labels'] = labels      # ['19.05','20.05',...]
+        ctx['chart_sales_data']   = data_sales  # [3, 5, 2, ...]
+
+        # 3) Остатки по категориям верхнего уровня
+        top_categories = Category.objects.filter(parent__isnull=True)
+        pie_labels = []
+        pie_data = []
+
+        for cat in top_categories:
+            # собираем все id: сам cat + его прямые subcategories
+            subcats = list(cat.subcategories.all())
+            ids = [cat.id] + [sc.id for sc in subcats]
+
+            total_stock = (
+                    Variant.objects
+                    .filter(product__category__in=ids)
+                    .aggregate(s=Sum('stock'))['s']
+                    or 0
+            )
+            pie_labels.append(cat.name)
+            pie_data.append(total_stock)
+
+        ctx['chart_stock_labels'] = pie_labels
+        ctx['chart_stock_data'] = pie_data
+
         return ctx
 
 class CategoryListView(ListView):
@@ -97,11 +140,6 @@ class ProductListView(ListView):
         ctx['selected_cat'] = self.request.GET.get('category', '')
         return ctx
 
-class ProductCreateView(CreateView):
-    model = Product
-    form_class = ProductForm
-    template_name = 'inventory/product_form.html'
-    success_url = reverse_lazy('variant-list')
 
 class VariantCreateView(CreateView):
     model = Variant
@@ -115,11 +153,30 @@ class StockInView(CreateView):
     template_name = 'inventory/stockin_form.html'
     success_url = reverse_lazy('variant-list')
 
-class SaleView(CreateView):
-    model = StockTransaction
-    form_class = SaleForm
+class SaleView(View):
     template_name = 'inventory/sale_form.html'
-    success_url = reverse_lazy('variant-list')
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        items = json.loads(request.POST.get('items_json', '[]'))
+        for entry in items:
+            vid = entry['variant']
+            qty = int(entry['quantity'])
+            variant = Variant.objects.get(id=vid)
+
+            # создаём транзакцию «Продажа» с положительным qty
+            StockTransaction.objects.create(
+                variant=variant,
+                transaction_type=StockTransaction.OUT,
+                quantity=qty,
+            )
+            # уменьшаем остаток
+            Variant.objects.filter(id=vid).update(stock=F('stock') - qty)
+
+        messages.success(request, f"Продано {len(items)} позиций.")
+        return redirect('transaction-list')
 
 class TransactionListView(ListView):
     model = StockTransaction

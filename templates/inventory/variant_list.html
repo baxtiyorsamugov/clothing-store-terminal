@@ -39,7 +39,7 @@
   <table class="table table-hover">
     <thead class="table-light">
       <tr>
-        <th>SKU</th><th>Товар</th><th>Размер</th><th>Цвет</th><th>Остаток</th><th>Цена</th><th></th>
+        <th>SKU</th><th>SKU(TEXT)</th><th>Товар</th><th>Размер</th><th>Цвет</th><th>Остаток</th><th>Цена</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -47,7 +47,7 @@
         <tr>
             {# Мини-картинка QR и ссылка на скачивание #}
             <td>
-              <img src="data:image/png;base64,{{ v.qr_code_base64 }}" 
+              <img src="data:image/png;base64,{{ v.qr_code_base64 }}"
                    width="50" height="50" alt="QR {{ v.sku }}">
               <div>
                 <a href="data:image/png;base64,{{ v.qr_code_base64 }}"

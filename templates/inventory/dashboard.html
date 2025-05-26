@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Дашборд{% endblock %}
 {% block content %}
+<div class="container-fluid">
   <h1>Дашборд</h1>
 
   <div class="row g-4 mb-5">
@@ -23,60 +24,66 @@
       </div>
     </div>
   </div>
+    <div class="row">
+        <div class="col-md-6 mb-4">
+          <div class="card card-custom p-3">
+            <h5>Продажи за последние 7 дней</h5>
+            <canvas id="salesChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="col-md-6 mb-4">
+          <div class="card card-custom p-3">
+            <h5>Остатки по категориям</h5>
+            <canvas id="stockChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+</div>
 
-  <!-- График продаж -->
-  <div class="mb-5">
-    <h3>Продажи за последние 7 дней</h3>
-    <canvas id="salesChart" height="120"></canvas>
-  </div>
-
-  <!-- График остатков -->
-  <div>
-    <h3>Остатки по категориям</h3>
-    <canvas id="stockChart" height="120"></canvas>
-  </div>
-
-  <script>
-    // --- График продаж ---
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    new Chart(salesCtx, {
-      type: 'line',
-      data: {
-        labels: {{ sales_dates|safe }},
-        datasets: [{
-          label: 'Штук продано',
-          data: {{ sales_qtys|safe }},
-          fill: false,
-          tension: 0.3,
-          borderWidth: 2
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: 'Кол-во продаж' } },
-          x: { title: { display: true, text: 'Дата' } }
-        }
+  <!-- Подключаем Chart.js из CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // 1) Продажи
+  const salesCtx = document.getElementById('salesChart').getContext('2d');
+  new Chart(salesCtx, {
+    type: 'line',
+    data: {
+      labels: {{ chart_sales_labels|safe }},
+      datasets: [{
+        label: 'Продано шт.',
+        data: {{ chart_sales_data|safe }},
+        fill: true,
+        borderColor: 'rgba(79,70,229,0.8)',
+        backgroundColor: 'rgba(79,70,229,0.2)',
+        tension: 0.4,
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true }
       }
-    });
+    }
+  });
 
-    // --- График остатков ---
-    const stockCtx = document.getElementById('stockChart').getContext('2d');
-    new Chart(stockCtx, {
-      type: 'bar',
-      data: {
-        labels: {{ stock_categories|safe }},
-        datasets: [{
-          label: 'Остаток',
-          data: {{ stock_values|safe }},
-          borderWidth: 1
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true, title: { display: true, text: 'Штук на складе' } },
-          x: { title: { display: true, text: 'Категория' } }
-        }
+  // 2) Остатки
+  const stockCtx = document.getElementById('stockChart').getContext('2d');
+  new Chart(stockCtx, {
+    type: 'pie',
+    data: {
+      labels: {{ chart_stock_labels|safe }},
+      datasets: [{
+        data: {{ chart_stock_data|safe }},
+        backgroundColor: [
+          '#4F46E5','#6366F1','#818CF8','#A5B4FC','#C7D2FE'
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' }
       }
-    });
-  </script>
+    }
+  });
+</script>
 {% endblock %}

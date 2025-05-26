@@ -1,41 +1,71 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  {% load static %}
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Inventory{% endblock %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    .sidebar { min-width: 200px; background: #f8f9fa; }
-    .sidebar .nav-link.active { font-weight: bold; }
-  </style>
-</head>
-<body class="d-flex container">
-  <nav class="sidebar p-3">
-    <h5 class="mb-3">Меню</h5>
-    <ul class="nav flex-column">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Панель управления{% endblock %}</title>
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet">
+  <!-- Google Fonts и иконки -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-      <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'product-add' %}active{% endif %}"
-           href="{% url 'product-add' %}">Добавить товар</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.url_name == 'product-list' %}active{% endif %}"
-           href="{% url 'product-list' %}">Товары</a>
-      </li>
-      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Дашборд</a></li>
-      <li class="nav-item"><a class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'category-list' %}">Категории</a></li>
-      <li class="nav-item"><a class="nav-link {% if 'variant' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'variant-list' %}">Варианты</a></li>
-      <li class="nav-item"><a class="nav-link" href="{% url 'stockin' %}">Приёмка</a></li>
-      <li class="nav-item"><a class="nav-link" href="{% url 'sale' %}">Продажа</a></li>
-      <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'transaction-list' %}active{% endif %}" href="{% url 'transaction-list' %}">Транзакции</a></li>
-    </ul>
-  </nav>
-  <main class="flex-fill p-4">
-    {% block content %}{% endblock %}
-  </main>
+  <!-- Bootstrap 5 или свой кастомизованный CSS -->
+  <link rel="stylesheet" href="{% static 'inventory/css/styles.css' %}">
+</head>
+<body class="container">
+  <header class="app-header d-flex align-items-center shadow-sm">
+    <div class="container-fluid d-flex justify-content-between">
+      <div class="d-flex align-items-center">
+        <i class="fa-solid fa-shirt fa-2x me-2 text-primary"></i>
+        <span class="fs-4 fw-bold">Store</span>
+      </div>
+{#      <div>#}
+{#        <input class="search-input" type="text" placeholder="Поиск товара…">#}
+{#        <i class="fa-solid fa-search text-secondary"></i>#}
+{#      </div>#}
+{#      <div class="user-menu">#}
+{#        <i class="fa-solid fa-bell me-3 text-secondary"></i>#}
+{#        <img src="{% static 'inventory/images/avatar.png' %}" class="avatar" alt="User">#}
+{#      </div>#}
+    </div>
+  </header>
+
+  <div class="d-flex">
+    <nav class="sidebar">
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+          <i class="fa-solid fa-chart-line me-1"></i> Дашборд
+        </a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'category-list' %}">
+          <i class="fa-solid fa-folder-tree me-1"></i> Категории
+        </a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'product-list' %}">
+          <i class="fa-solid fa-box-open me-1"></i> Товары
+        </a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'variant-list' %}">
+          <i class="fa-solid fa-tags me-1"></i> Варианты
+        </a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'stockin' %}">
+          <i class="fa-solid fa-truck-arrow-right me-1"></i> Приёмка
+        </a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'sale' %}">
+          <i class="fa-solid fa-cash-register me-1"></i> Продажа
+        </a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'transaction-list' %}">
+          <i class="fa-solid fa-receipt me-1"></i> Транзакции
+        </a></li>
+      </ul>
+    </nav>
+
+    <main class="content p-4">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Общие скрипты -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
