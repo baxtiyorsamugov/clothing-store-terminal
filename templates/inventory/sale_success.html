@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Продажа совершена{% endblock %}
+
+{% block content %}
+  <div class="card-custom text-center p-5 mx-auto" style="max-width:500px">
+    <i class="fa-solid fa-circle-check fa-3x text-success mb-3"></i>
+    <h3>Успешно продано!</h3>
+    <p class="lead">
+      Вы продали <strong>{{ sale.quantity }}</strong> шт. варианта
+      <strong>{{ sale.variant.product.name }} (SKU: {{ sale.variant.sku }})</strong>.
+    </p>
+    <p>Общая сумма: <strong>{{ sale.total_price }} ₽</strong></p>
+
+    <a href="{% url 'sale-receipt' sale.id %}" class="btn btn-primary mt-4">
+      Скачать чек
+    </a>
+    <a href="{% url 'sale' %}" class="btn btn-secondary mt-4 ms-2">
+      Продать ещё
+    </a>
+  </div>
+{% endblock %}

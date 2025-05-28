@@ -20,7 +20,7 @@
     <div class="container-fluid d-flex justify-content-between">
       <div class="d-flex align-items-center">
         <i class="fa-solid fa-shirt fa-2x me-2 text-primary"></i>
-        <span class="fs-4 fw-bold">Store</span>
+        <span class="fs-4 fw-bold">All max store</span>
       </div>
 {#      <div>#}
 {#        <input class="search-input" type="text" placeholder="Поиск товара…">#}
@@ -30,10 +30,32 @@
 {#        <i class="fa-solid fa-bell me-3 text-secondary"></i>#}
 {#        <img src="{% static 'inventory/images/avatar.png' %}" class="avatar" alt="User">#}
 {#      </div>#}
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+      <div class="container">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
+          <img src="{% static 'inventory/logo.png' %}" height="30" alt="">
+
+        </a>
+        <div class="ms-auto">
+          {% if user.is_authenticated %}
+            <span class="me-3">Привет, {{ user.username }}!</span>
+            <form method="post" action="{% url 'seller-logout' %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-secondary btn-sm">
+                Выйти
+              </button>
+            </form>
+          {% else %}
+            <a href="{% url 'seller-login' %}" class="btn btn-primary btn-sm">Вход</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
     </div>
   </header>
 
   <div class="d-flex">
+  {% if user.is_authenticated %}
     <nav class="sidebar">
       <ul class="nav flex-column">
         <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
@@ -59,7 +81,7 @@
         </a></li>
       </ul>
     </nav>
-
+    {% endif %}
     <main class="content p-4">
       {% block content %}{% endblock %}
     </main>

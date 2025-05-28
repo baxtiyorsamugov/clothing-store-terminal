@@ -6,8 +6,10 @@ from .views import (
     VariantCreateView,
     StockInView, SaleView,
     TransactionListView,
-    variant_api,   
+    variant_api,
 )
+
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='dashboard'),
@@ -27,4 +29,16 @@ urlpatterns = [
     path('transactions/', TransactionListView.as_view(), name='transaction-list'),
 
     path('api/variant/<str:sku>/', variant_api, name='variant-api'),
+
+    path('stock/sale/', SaleView.as_view(), name='sale'),
+
+    path('seller/login/',
+         auth_views.LoginView.as_view(
+             template_name='accounts/seller_login.html',
+             redirect_authenticated_user=True
+         ),
+         name='seller-login'),
+    path('seller/logout/',
+         auth_views.LogoutView.as_view(),
+         name='seller-logout'),
 ]

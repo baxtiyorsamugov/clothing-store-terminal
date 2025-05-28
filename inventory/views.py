@@ -1,5 +1,5 @@
 from django.views.generic import (
-    ListView, CreateView, UpdateView, DeleteView, TemplateView, ListView
+    ListView, CreateView, UpdateView, DeleteView, TemplateView, ListView, View
 )
 import json
 from django.views import View
@@ -19,6 +19,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db.models import F
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 class ProductCreateView(CreateView):
     model = Product
@@ -50,7 +51,8 @@ class VariantListView(ListView):
         ctx['selected_sort']     = self.request.GET.get('sort', '')
         return ctx
 
-class DashboardView(TemplateView):
+class DashboardView(LoginRequiredMixin, TemplateView):
+    login_url = 'seller-login'
     template_name = 'inventory/dashboard.html'
 
     def get_context_data(self, **kwargs):
@@ -153,11 +155,14 @@ class StockInView(CreateView):
     template_name = 'inventory/stockin_form.html'
     success_url = reverse_lazy('variant-list')
 
-class SaleView(View):
+class SaleView(LoginRequiredMixin, View):
+    login_url = 'seller-login'
     template_name = 'inventory/sale_form.html'
 
     def get(self, request):
         return render(request, self.template_name)
+
+
 
     def post(self, request):
         items = json.loads(request.POST.get('items_json', '[]'))
